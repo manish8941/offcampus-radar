@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://manish8941.github.io/offcampus-radar/sitemap.xml
