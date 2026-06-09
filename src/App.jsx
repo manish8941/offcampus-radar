@@ -5,7 +5,11 @@ const GOOGLE_SHEET_WEB_APP_URL = "";
 const LOCAL_LEADS_KEY = "offcampusRadarLeads";
 
 const scrollToSection = (id) => {
-  document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  const section = document.getElementById(id);
+  if (!section) return;
+
+  section.scrollIntoView({ behavior: "smooth", block: "start" });
+  window.history.replaceState(null, "", `#${id}`);
 };
 
 const saveLeadLocally = (lead) => {
@@ -78,12 +82,12 @@ function Hero() {
             ))}
           </div>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <button className="primary-button" onClick={() => scrollToSection("join")}>
+            <a className="primary-button" href="#join" onClick={() => scrollToSection("join")}>
               Get Hiring Alerts
-            </button>
-            <button className="secondary-button" onClick={() => scrollToSection("verification")}>
+            </a>
+            <a className="secondary-button" href="#verification" onClick={() => scrollToSection("verification")}>
               How We Verify Openings
-            </button>
+            </a>
           </div>
           <p className="mt-5 text-sm font-medium text-slate-500">
             Built for students, freshers, and early-career developers who want cleaner hiring signals.
@@ -301,9 +305,9 @@ function FreePremium() {
                   </li>
                 ))}
               </ul>
-              <button className="primary-button mt-7 w-full" onClick={() => scrollToSection("join")}>
+              <a className="primary-button mt-7 w-full" href="#join" onClick={() => scrollToSection("join")}>
                 {plan.button}
-              </button>
+              </a>
             </article>
           ))}
         </div>
@@ -400,15 +404,15 @@ function JoinForm() {
           <div className="grid gap-5 sm:grid-cols-2">
             <label className="block" htmlFor="fullName">
               <span className="text-sm font-bold text-slate-700">Full Name</span>
-              <input id="fullName" className="mt-2 w-full rounded-lg border border-slate-200 px-4 py-3 outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100" name="fullName" value={formData.fullName} onChange={updateField} required />
+              <input id="fullName" className="mt-2 w-full rounded-lg border border-slate-200 px-4 py-3 outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100" name="fullName" value={formData.fullName} onChange={updateField} autoComplete="name" inputMode="text" required />
             </label>
             <label className="block" htmlFor="email">
               <span className="text-sm font-bold text-slate-700">Email Address</span>
-              <input id="email" className="mt-2 w-full rounded-lg border border-slate-200 px-4 py-3 outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100" type="email" name="email" value={formData.email} onChange={updateField} required />
+              <input id="email" className="mt-2 w-full rounded-lg border border-slate-200 px-4 py-3 outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100" type="email" name="email" value={formData.email} onChange={updateField} autoComplete="email" inputMode="email" required />
             </label>
             <label className="block" htmlFor="whatsapp">
               <span className="text-sm font-bold text-slate-700">WhatsApp Number</span>
-              <input id="whatsapp" className="mt-2 w-full rounded-lg border border-slate-200 px-4 py-3 outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100" name="whatsapp" value={formData.whatsapp} onChange={updateField} required />
+              <input id="whatsapp" className="mt-2 w-full rounded-lg border border-slate-200 px-4 py-3 outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100" type="tel" name="whatsapp" value={formData.whatsapp} onChange={updateField} autoComplete="tel" inputMode="tel" required />
             </label>
             <label className="block" htmlFor="batch">
               <span className="text-sm font-bold text-slate-700">Graduation Year / Batch</span>
