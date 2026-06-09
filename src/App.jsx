@@ -1,9 +1,40 @@
 import { useState } from "react";
 
 const WHATSAPP_CHANNEL_LINK = "https://whatsapp.com/channel/0029Vb8ngp53bbV6s5ccR635";
+const GOOGLE_SHEET_WEB_APP_URL = "";
+const LOCAL_LEADS_KEY = "offcampusRadarLeads";
 
 const scrollToSection = (id) => {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+};
+
+const saveLeadLocally = (lead) => {
+  try {
+    const savedEntries = JSON.parse(localStorage.getItem(LOCAL_LEADS_KEY) || "[]");
+    const entries = Array.isArray(savedEntries) ? savedEntries : [];
+    localStorage.setItem(LOCAL_LEADS_KEY, JSON.stringify([...entries, lead]));
+    return true;
+  } catch (error) {
+    console.warn("Could not save lead locally", error);
+    return false;
+  }
+};
+
+const sendLeadToGoogleSheet = async (lead) => {
+  if (!GOOGLE_SHEET_WEB_APP_URL) {
+    return false;
+  }
+
+  await fetch(GOOGLE_SHEET_WEB_APP_URL, {
+    method: "POST",
+    mode: "no-cors",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded"
+    },
+    body: new URLSearchParams(lead).toString()
+  });
+
+  return true;
 };
 
 function Hero() {
@@ -283,6 +314,9 @@ function FreePremium() {
 
 function JoinForm() {
   const [submitted, setSubmitted] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [formMessage, setFormMessage] = useState("");
+  const [formError, setFormError] = useState("");
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -298,14 +332,36 @@ function JoinForm() {
     setFormData((current) => ({ ...current, [name]: value }));
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    const savedEntries = JSON.parse(localStorage.getItem("offcampusRadarLeads") || "[]");
-    localStorage.setItem(
-      "offcampusRadarLeads",
-      JSON.stringify([...savedEntries, { ...formData, submittedAt: new Date().toISOString() }])
-    );
-    setSubmitted(true);
+    setIsSaving(true);
+    setFormError("");
+    setFormMessage("");
+
+    const lead = {
+      ...formData,
+      submittedAt: new Date().toISOString(),
+      source: "OffCampus Radar website"
+    };
+
+    try {
+      const savedLocally = saveLeadLocally(lead);
+      const sentToSheet = await sendLeadToGoogleSheet(lead);
+
+      setSubmitted(true);
+      setFormMessage(
+        sentToSheet
+          ? "Thanks! Your details have been saved. Join our official WhatsApp channel to start receiving hiring alerts."
+          : savedLocally
+            ? "Thanks! Your details have been saved in this browser. Join our official WhatsApp channel to start receiving hiring alerts."
+            : "Thanks! Your form was submitted, but this browser blocked local saving. Please join the WhatsApp channel for alerts."
+      );
+    } catch (error) {
+      console.error("Lead submission failed", error);
+      setFormError("Something went wrong while saving your details. Please try again or join the WhatsApp channel directly.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -328,51 +384,58 @@ function JoinForm() {
           >
             Join WhatsApp Channel
           </a>
-          {submitted && (
+          {formMessage && (
             <p className="mt-5 rounded-lg border border-emerald-100 bg-emerald-50 p-4 text-sm font-semibold leading-6 text-emerald-800">
-              Thanks! Your details have been saved. Join our official WhatsApp channel to start receiving hiring alerts.
+              {formMessage}
+            </p>
+          )}
+          {formError && (
+            <p className="mt-5 rounded-lg border border-red-100 bg-red-50 p-4 text-sm font-semibold leading-6 text-red-700">
+              {formError}
             </p>
           )}
         </div>
 
         <form className="card p-5 sm:p-7" onSubmit={handleSubmit}>
           <div className="grid gap-5 sm:grid-cols-2">
-            <label className="block">
+            <label className="block" htmlFor="fullName">
               <span className="text-sm font-bold text-slate-700">Full Name</span>
-              <input className="mt-2 w-full rounded-lg border border-slate-200 px-4 py-3 outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100" name="fullName" value={formData.fullName} onChange={updateField} required />
+              <input id="fullName" className="mt-2 w-full rounded-lg border border-slate-200 px-4 py-3 outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100" name="fullName" value={formData.fullName} onChange={updateField} required />
             </label>
-            <label className="block">
+            <label className="block" htmlFor="email">
               <span className="text-sm font-bold text-slate-700">Email Address</span>
-              <input className="mt-2 w-full rounded-lg border border-slate-200 px-4 py-3 outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100" type="email" name="email" value={formData.email} onChange={updateField} required />
+              <input id="email" className="mt-2 w-full rounded-lg border border-slate-200 px-4 py-3 outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100" type="email" name="email" value={formData.email} onChange={updateField} required />
             </label>
-            <label className="block">
+            <label className="block" htmlFor="whatsapp">
               <span className="text-sm font-bold text-slate-700">WhatsApp Number</span>
-              <input className="mt-2 w-full rounded-lg border border-slate-200 px-4 py-3 outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100" name="whatsapp" value={formData.whatsapp} onChange={updateField} required />
+              <input id="whatsapp" className="mt-2 w-full rounded-lg border border-slate-200 px-4 py-3 outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100" name="whatsapp" value={formData.whatsapp} onChange={updateField} required />
             </label>
-            <label className="block">
+            <label className="block" htmlFor="batch">
               <span className="text-sm font-bold text-slate-700">Graduation Year / Batch</span>
-              <select className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-4 py-3 outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100" name="batch" value={formData.batch} onChange={updateField}>
+              <select id="batch" className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-4 py-3 outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100" name="batch" value={formData.batch} onChange={updateField}>
                 {["2025", "2026", "2027", "2028", "2029", "Other"].map((item) => <option key={item}>{item}</option>)}
               </select>
             </label>
-            <label className="block">
+            <label className="block" htmlFor="role">
               <span className="text-sm font-bold text-slate-700">Interested Role</span>
-              <select className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-4 py-3 outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100" name="role" value={formData.role} onChange={updateField}>
+              <select id="role" className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-4 py-3 outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100" name="role" value={formData.role} onChange={updateField}>
                 {["Software Developer", "Frontend Developer", "Backend Developer", "Full Stack Developer", "React Developer", "Java Developer", "QA Tester", "Data Analyst", "Data Scientist", "DevOps", "Cloud", "Cybersecurity", "Other"].map((item) => <option key={item}>{item}</option>)}
               </select>
             </label>
-            <label className="block">
+            <label className="block" htmlFor="updateType">
               <span className="text-sm font-bold text-slate-700">Preferred Update Type</span>
-              <select className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-4 py-3 outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100" name="updateType" value={formData.updateType} onChange={updateField}>
+              <select id="updateType" className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-4 py-3 outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100" name="updateType" value={formData.updateType} onChange={updateField}>
                 {["Free Alerts", "Premium Alerts", "Both"].map((item) => <option key={item}>{item}</option>)}
               </select>
             </label>
           </div>
-          <label className="mt-5 block">
+          <label className="mt-5 block" htmlFor="message">
             <span className="text-sm font-bold text-slate-700">Message / Goal</span>
-            <textarea className="mt-2 min-h-32 w-full rounded-lg border border-slate-200 px-4 py-3 outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100" name="message" value={formData.message} onChange={updateField} placeholder="Tell us what type of roles you are looking for..." />
+            <textarea id="message" className="mt-2 min-h-32 w-full rounded-lg border border-slate-200 px-4 py-3 outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100" name="message" value={formData.message} onChange={updateField} placeholder="Tell us what type of roles you are looking for..." />
           </label>
-          <button className="primary-button mt-6 w-full" type="submit">Save My Details</button>
+          <button className="primary-button mt-6 w-full disabled:cursor-not-allowed disabled:opacity-70" type="submit" disabled={isSaving}>
+            {isSaving ? "Saving Details..." : "Save My Details"}
+          </button>
         </form>
       </div>
     </section>
